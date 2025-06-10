@@ -66,14 +66,25 @@ def update_reply(group_id, user_id, reply_text):
     conn.close()
     return True
 
-def get_today_stats(group_id):
+def get_today_stats(group_id=None):
+    """獲取今天的統計，支援特定群組或全局統計"""
     today = datetime.now().strftime("%Y-%m-%d")
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    c.execute('''
-        SELECT user_name, reply_text FROM replies
-        WHERE group_id = ? AND DATE(timestamp) = ?
-    ''', (group_id, today))
+    
+    if group_id == "all" or group_id is None:
+        # 獲取所有用戶的統計
+        c.execute('''
+            SELECT user_name, reply_text FROM replies
+            WHERE DATE(timestamp) = ?
+        ''', (today,))
+    else:
+        # 獲取特定群組的統計
+        c.execute('''
+            SELECT user_name, reply_text FROM replies
+            WHERE group_id = ? AND DATE(timestamp) = ?
+        ''', (group_id, today))
+    
     rows = c.fetchall()
     conn.close()
 

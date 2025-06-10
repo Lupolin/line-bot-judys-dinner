@@ -8,7 +8,7 @@ from linebot.v3.webhook import WebhookHandler
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from linebot.v3.exceptions import InvalidSignatureError
 from db import init_db, insert_reply, has_replied_today, get_today_stats, update_reply
-from line_service import get_group_member_name
+from line_service import push_message_to_user  # ✅ 保留已存在的功能
 
 load_dotenv()
 app = Flask(__name__)
@@ -17,6 +17,16 @@ configuration = Configuration(access_token=os.getenv("LINE_CHANNEL_ACCESS_TOKEN"
 api_client = ApiClient(configuration=configuration)
 line_bot_api = MessagingApi(api_client)
 handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
+
+
+def get_group_member_name(group_id, user_id):
+    try:
+        profile: GetGroupMemberProfileResponse = line_bot_api.get_group_member_profile(group_id, user_id)
+        return profile.display_name
+    except Exception as e:
+        print("[取得群組成員名稱失敗]", e)
+        return "匿名使用者"
+
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -35,6 +45,7 @@ def callback():
         abort(500)
 
     return 'OK'
+
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
@@ -82,6 +93,7 @@ def handle_message(event):
     except Exception as e:
         print("[Unhandled error in handle_message]", e)
 
+
 def reply(event, text):
     try:
         line_bot_api.reply_message(
@@ -92,6 +104,7 @@ def reply(event, text):
         )
     except Exception as e:
         print("[Reply error]", e)
+
 
 if __name__ == "__main__":
     from scheduler import scheduler
