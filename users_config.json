@@ -1,0 +1,17 @@
+[
+  {
+    "user_id": "U7dea8d9994294af2d1f6b71ace626ba0",
+    "name": "Lucas",
+    "days": ["mon"]
+  },
+  {
+    "user_id": "Uxxxxxxxx_eddie",
+    "name": "Eddie",
+    "days": ["fri"]
+  },
+  {
+    "user_id": "Uxxxxxxxx_judy",
+    "name": "Judy",
+    "days": ["mon", "fri"]
+  }
+]
