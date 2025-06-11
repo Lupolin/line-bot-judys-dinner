@@ -67,7 +67,7 @@ def scheduled_notification():
 # 設置排程器
 scheduler = BackgroundScheduler()
 # 每分鐘檢查一次是否需要發送通知
-scheduler.add_job(scheduled_notification, 'cron', minute='*/5')
+scheduler.add_job(scheduled_notification, 'cron', minute='*')
 scheduler.start()
 
 print("[排程器啟動] 個人化通知系統已啟動")

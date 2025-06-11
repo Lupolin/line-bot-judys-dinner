@@ -1,6 +1,7 @@
 from flask import Flask, request, abort
 from dotenv import load_dotenv
 import os
+import json
 from datetime import datetime
 from linebot.v3.messaging import MessagingApi, Configuration, ApiClient
 from linebot.v3.messaging.models import TextMessage, ReplyMessageRequest
@@ -8,7 +9,7 @@ from linebot.v3.webhook import WebhookHandler
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from linebot.v3.exceptions import InvalidSignatureError
 from db import init_db, insert_reply, has_replied_today, get_today_stats, update_reply
-from line_service import push_message_to_user  # ✅ 保留已存在的功能
+from line_service import push_message_to_user  # 保留以供排程通知使用
 
 load_dotenv()
 app = Flask(__name__)
@@ -19,13 +20,17 @@ line_bot_api = MessagingApi(api_client)
 handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
 
 
-def get_group_member_name(group_id, user_id):
+# ✅ 透過 users_config.json 抓 user_name
+def get_name_from_config(user_id):
     try:
-        profile: GetGroupMemberProfileResponse = line_bot_api.get_group_member_profile(group_id, user_id)
-        return profile.display_name
+        with open("users_config.json", encoding="utf-8") as f:
+            config = json.load(f)
+            for user in config.get("users", []):
+                if user["user_id"] == user_id:
+                    return user["name"]
     except Exception as e:
-        print("[取得群組成員名稱失敗]", e)
-        return "匿名使用者"
+        print("[取得使用者名稱錯誤]", e)
+    return user_id  # fallback 成 user_id
 
 
 @app.route("/callback", methods=['POST'])
@@ -50,16 +55,15 @@ def callback():
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     try:
-        source_type = event.source.type
         user_id = event.source.user_id
-        group_id = getattr(event.source, 'group_id', None)
         reply_text = event.message.text.strip()
+        user_name = get_name_from_config(user_id)
 
-        print(f"[MessageEvent] 來源 {source_type}，使用者 {user_id}，訊息：{reply_text}")
+        print(f"[MessageEvent] 使用者 {user_id}（{user_name}）輸入：{reply_text}")
 
-        # 查詢統計指令（僅限群組內）
-        if reply_text in ["統計", "晚餐"] and group_id:
-            yes_list, no_list = get_today_stats(group_id)
+        # 📊 查詢統計（不限群組）
+        if reply_text in ["統計", "晚餐"]:
+            yes_list, no_list = get_today_stats("all")
             yes_names = "\n".join(f"- {name}" for name in yes_list)
             no_names = "\n".join(f"- {name}" for name in no_list)
             response = f"🍽 晚餐統計（{datetime.now().strftime('%m/%d')}）\n"
@@ -68,24 +72,19 @@ def handle_message(event):
             reply(event, response)
             return
 
-        # 靜默記錄「要 / 不要」
+        # ✅ 回覆「要 / 不要」
         if reply_text in ["要", "不要", "yes", "Yes", "no", "No"]:
+            group_or_user_id = user_id  # 現在無群組，就用 user_id 當 key
             try:
-                user_name = get_group_member_name(group_id, user_id) if group_id else user_id
-            except Exception as e:
-                print("[get_group_member_name error]", e)
-                user_name = "匿名使用者"
-
-            try:
-                if has_replied_today(group_id or user_id, user_id):
-                    updated = update_reply(group_id or user_id, user_id, reply_text)
+                if has_replied_today(group_or_user_id, user_id):
+                    updated = update_reply(group_or_user_id, user_id, reply_text)
                     if updated:
-                        print(f"[記錄更新] 使用者 {user_name} 已更新為「{reply_text}」")
+                        print(f"[記錄更新] {user_name} 已更新為「{reply_text}」")
                     else:
-                        print(f"[記錄略過] 使用者 {user_name} 已回覆相同內容「{reply_text}」，略過")
+                        print(f"[記錄略過] {user_name} 已回覆相同內容「{reply_text}」，略過")
                 else:
-                    insert_reply(group_id or user_id, user_id, user_name, reply_text)
-                    print(f"[記錄新增] 使用者 {user_name} 新增「{reply_text}」")
+                    insert_reply(group_or_user_id, user_id, user_name, reply_text)
+                    print(f"[記錄新增] {user_name} 回覆「{reply_text}」")
             except Exception as e:
                 print("[資料庫錯誤]", e)
             return
