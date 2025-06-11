@@ -3,7 +3,6 @@ from linebot.v3 import WebhookHandler
 from linebot.v3.webhook import WebhookParser
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage
-from apscheduler.schedulers.background import BackgroundScheduler
 import os
 from db import init_db
 import logging
@@ -77,13 +76,11 @@ def handle_message(event):
         reply(event, f"你說了：{user_text}")
 
 # ✅ 初始化（給 Gunicorn 用）
-from scheduler import scheduler  # 確保 scheduler 被引用且初始化
 init_db()
 
 # ✅ 若用 python app.py 啟動則使用內建伺服器
 
 def main():
-    from scheduler import scheduler
     init_db()
     app.run(host="0.0.0.0", port=5002, debug=True)
 
