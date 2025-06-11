@@ -4,6 +4,10 @@ from db import get_today_stats
 import json
 import datetime
 import os
+import pytz
+
+# 設定台灣時區
+tz = pytz.timezone("Asia/Taipei")
 
 def load_user_config():
     """載入用戶配置"""
@@ -28,9 +32,9 @@ def send_summary_notification(user):
     """發送統計摘要通知"""
     try:
         # 獲取今天所有用戶的統計
-        yes_list, no_list = get_today_stats("all")  # 需要修改 db.py 支援此功能
+        yes_list, no_list = get_today_stats("all")
         
-        today_str = datetime.datetime.now().strftime('%m/%d')
+        today_str = datetime.datetime.now(tz).strftime('%m/%d')
         summary = f"🍽 晚餐統計（{today_str}）\n"
         summary += f"✅ 要吃晚餐（{len(yes_list)}人）:\n"
         summary += "\n".join(f"- {name}" for name in yes_list) or "（無）"
@@ -46,12 +50,12 @@ def send_summary_notification(user):
 def scheduled_notification():
     """定時通知處理"""
     config = load_user_config()
-    current_time = datetime.datetime.now()
+    current_time = datetime.datetime.now(tz)  # 使用台灣時間
     current_day = current_time.strftime("%A").lower()  # monday, tuesday, etc.
     current_hour = current_time.hour
     current_minute = current_time.minute
     
-    print(f"[排程檢查] {current_day} {current_hour:02d}:{current_minute:02d}")
+    print(f"[排程檢查] {current_day} {current_hour:02d}:{current_minute:02d}（Asia/Taipei）")
     
     for user in config.get("users", []):
         for notification in user.get("notification_times", []):
@@ -64,10 +68,9 @@ def scheduled_notification():
                 elif notification["type"] == "summary":
                     send_summary_notification(user)
 
-# 設置排程器
-scheduler = BackgroundScheduler()
-# 每分鐘檢查一次是否需要發送通知
+# ✅ 設置排程器，明確指定使用台灣時區
+scheduler = BackgroundScheduler(timezone=tz)
 scheduler.add_job(scheduled_notification, 'cron', minute='*')
 scheduler.start()
 
-print("[排程器啟動] 個人化通知系統已啟動")
+print("[排程器啟動] 個人化通知系統已啟動（Asia/Taipei）")

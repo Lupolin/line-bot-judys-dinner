@@ -11,16 +11,20 @@ from linebot.v3.exceptions import InvalidSignatureError
 from db import init_db, insert_reply, has_replied_today, get_today_stats, update_reply
 from line_service import push_message_to_user  # 保留以供排程通知使用
 
+# ✅ 載入 .env
 load_dotenv()
+
+# ✅ 建立 Flask app
 app = Flask(__name__)
 
+# ✅ LINE Messaging API 設定
 configuration = Configuration(access_token=os.getenv("LINE_CHANNEL_ACCESS_TOKEN"))
 api_client = ApiClient(configuration=configuration)
 line_bot_api = MessagingApi(api_client)
 handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
 
 
-# ✅ 透過 users_config.json 抓 user_name
+# ✅ 從 config JSON 取 user name
 def get_name_from_config(user_id):
     try:
         with open("users_config.json", encoding="utf-8") as f:
@@ -33,6 +37,7 @@ def get_name_from_config(user_id):
     return user_id  # fallback 成 user_id
 
 
+# ✅ 處理 LINE webhook
 @app.route("/callback", methods=['POST'])
 def callback():
     signature = request.headers.get('X-Line-Signature', '')
@@ -52,6 +57,7 @@ def callback():
     return 'OK'
 
 
+# ✅ 處理訊息事件
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     try:
@@ -61,7 +67,7 @@ def handle_message(event):
 
         print(f"[MessageEvent] 使用者 {user_id}（{user_name}）輸入：{reply_text}")
 
-        # 📊 查詢統計（不限群組）
+        # 📊 查詢統計
         if reply_text in ["統計", "晚餐"]:
             yes_list, no_list = get_today_stats("all")
             yes_names = "\n".join(f"- {name}" for name in yes_list)
@@ -74,7 +80,7 @@ def handle_message(event):
 
         # ✅ 回覆「要 / 不要」
         if reply_text in ["要", "不要", "yes", "Yes", "no", "No"]:
-            group_or_user_id = user_id  # 現在無群組，就用 user_id 當 key
+            group_or_user_id = user_id
             try:
                 if has_replied_today(group_or_user_id, user_id):
                     updated = update_reply(group_or_user_id, user_id, reply_text)
@@ -93,6 +99,7 @@ def handle_message(event):
         print("[Unhandled error in handle_message]", e)
 
 
+# ✅ 發送回覆
 def reply(event, text):
     try:
         line_bot_api.reply_message(
@@ -105,7 +112,16 @@ def reply(event, text):
         print("[Reply error]", e)
 
 
-if __name__ == "__main__":
+# ✅ 只在開發模式時初始化並啟動 Flask
+def main():
     from scheduler import scheduler
     init_db()
-    app.run(host="0.0.0.0", port=5002)
+    app.run(host="0.0.0.0", port=5002, debug=True)
+
+
+# ✅ 給 Gunicorn 用：不會跑 main()，但仍能載入 app 與初始化需要的內容
+from scheduler import scheduler
+init_db()
+
+if __name__ == "__main__":
+    main()
