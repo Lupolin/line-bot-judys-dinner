@@ -1,28 +1,31 @@
-name: Deploy Judy's Dinner to EC2
+- name: Deploy via SSH
+  uses: appleboy/ssh-action@v1.0.0
+  with:
+    host: ${{ secrets.EC2_HOST }}
+    username: ${{ secrets.EC2_USER }}
+    key: ${{ secrets.EC2_KEY }}
+    script: |
+      set -e
+      echo "[STEP] 切換目錄"
+      cd /home/ec2-user/projects/python/line-bot-judys-dinner
 
-on:
-  push:
-    branches:
-      - master  # 或 main，依你 repo 而定
+      echo "[STEP] 更新程式碼"
+      git reset --hard HEAD
+      git pull origin master
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
+      echo "[STEP] 啟動 venv"
+      if [ -f "venv/bin/activate" ]; then
+        source venv/bin/activate
+        echo "[INFO] Python 路徑: $(which python)"
+        echo "[INFO] Pip 路徑: $(which pip)"
+      else
+        echo "[ERROR] 找不到 venv，請確認路徑"
+        exit 1
+      fi
 
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      echo "[STEP] 安裝 requirements"
+      pip install -r requirements.txt
+      pip show pytz || echo "[WARNING] pytz 沒有成功安裝"
 
-    - name: Deploy via SSH
-      uses: appleboy/ssh-action@v1.0.0
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_KEY }}
-        script: |
-          cd /home/ec2-user/projects/python/line-bot-judys-dinner
-          git reset --hard HEAD
-          git pull origin master
-          source venv/bin/activate
-          pip install -r requirements.txt
-          sudo systemctl restart judys-dinner
+      echo "[STEP] 重啟 systemd 服務"
+      sudo systemctl restart judys-dinner
