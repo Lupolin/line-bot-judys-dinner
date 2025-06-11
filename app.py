@@ -108,4 +108,4 @@ def reply(event, text):
 if __name__ == "__main__":
     from scheduler import scheduler
     init_db()
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5002)
