@@ -7,9 +7,9 @@ from linebot.v3.messaging import (
     ReplyMessageRequest, TextMessage
 )
 import os
-import logging
 from db import init_db
 from scheduler import start_scheduler
+import logging
 
 # ✅ 設定 logger
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ handler = WebhookHandler(channel_secret)
 configuration = Configuration(access_token=channel_access_token)
 line_bot_api = MessagingApi(ApiClient(configuration))
 
-# ✅ 回覆訊息
+# ✅ 發送回覆
 def reply(event, text):
     try:
         line_bot_api.reply_message(
@@ -63,7 +63,7 @@ def callback():
 
     return 'OK'
 
-# ✅ 處理文字訊息
+# ✅ 接收文字訊息事件
 @handler.add(TextMessage)
 def handle_message(event):
     user_text = event.text.strip()
@@ -76,19 +76,15 @@ def handle_message(event):
     else:
         reply(event, f"你說了：{user_text}")
 
-# ✅ 初始化資料庫
+# ✅ 初始化（給 Gunicorn 或本地開發使用）
 init_db()
 
-# ✅ 僅讓主 worker 啟動排程器（避免多重排程）
-if os.environ.get("IS_MAIN_PROCESS", "").lower() == "true":
-    start_scheduler()
-
-# ✅ 若用 python app.py 執行（開發用途）
 def main():
     init_db()
-    start_scheduler()
+    # 只在主程序（非 Debug reload）時啟動 Scheduler
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        start_scheduler()
     app.run(host="0.0.0.0", port=5002, debug=True)
 
 if __name__ == "__main__":
-    os.environ["IS_MAIN_PROCESS"] = "true"
     main()
