@@ -1,5 +1,7 @@
 import sqlite3
 from datetime import datetime
+import json
+import os
 
 db_path = "reply.db"
 
@@ -91,3 +93,20 @@ def get_today_stats(group_id=None):
     yes_list = [row[0] for row in rows if row[1] in ["要", "yes", "Yes"]]
     no_list = [row[0] for row in rows if row[1] in ["不要", "no", "No"]]
     return yes_list, no_list
+
+# 新增程式碼
+def get_name_from_config(user_id):
+    config_path = "users_config.json"
+    if not os.path.exists(config_path):
+        return "未知使用者"
+    
+    try:
+        with open(config_path, encoding="utf-8") as f:
+            data = json.load(f)
+            for user in data.get("users", []):
+                if user.get("user_id") == user_id:
+                    return user.get("name", "未知使用者")
+    except Exception:
+        return "未知使用者"
+    
+    return "未知使用者"
