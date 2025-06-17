@@ -119,11 +119,14 @@ def handle_message(event):
 init_db()
 
 def main():
-    init_db()
-    # 只在主程序（非 Debug reload）時啟動 Scheduler
-    if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
-        start_scheduler()
+    print("✅ Running local Flask server")
+    start_scheduler()
     app.run(host="0.0.0.0", port=5002, debug=False)
 
+# ✅ 若是本地執行，跑 main()（含 scheduler 與 app.run）
+# ✅ 若是 Gunicorn，則由環境變數控制是否啟動 scheduler
 if __name__ == "__main__":
     main()
+elif os.environ.get("RUN_SCHEDULER") == "true":
+    print("✅ Starting scheduler under Gunicorn")
+    start_scheduler()
