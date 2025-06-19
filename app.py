@@ -17,7 +17,7 @@ from db import (
     insert_reply,
     get_name_from_config  # <-- 這是前面補過的函式
 )
-from scheduler import start_scheduler
+from scheduler import start_scheduler, get_next_monday
 import logging
 
 
@@ -77,6 +77,8 @@ def reply(event, text):
 # ✅ 處理訊息事件Add commentMore actions
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
+    next_monday_str = get_next_monday()
+
     try:
         user_id = event.source.user_id
         reply_text = event.message.text.strip()
@@ -89,7 +91,7 @@ def handle_message(event):
             yes_list, no_list = get_today_stats("all")
             yes_names = "\n".join(f"- {name}" for name in yes_list)
             no_names = "\n".join(f"- {name}" for name in no_list)
-            response = f"🍽 晚餐統計（{datetime.now().strftime('%m/%d')}）\n"
+            response = f"🍽 晚餐統計（{next_monday_str}）\n"
             response += f"✅ 要吃晚餐（{len(yes_list)}人）:\n{yes_names or '（無）'}\n\n"
             response += f"❌ 不吃晚餐（{len(no_list)}人）:\n{no_names or '（無）'}"
             reply(event, response)
