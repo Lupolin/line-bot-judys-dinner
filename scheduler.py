@@ -47,9 +47,9 @@ def send_ask_notification(user):
 def send_summary_notification(user):
     try:
         yes_list, no_list = get_today_stats("all")
-        today_str = datetime.now(tz).strftime('%m/%d')
+        next_monday_str = get_next_monday()
 
-        summary = f"🍽 晚餐統計（{today_str}）\n"
+        summary = f"🍽 晚餐統計（{next_monday_str}）\n"
         summary += f"✅ 要吃晚餐（{len(yes_list)}人）:\n"
         summary += "\n".join(f"- {name}" for name in yes_list) or "（無）"
         summary += f"\n\n❌ 不吃晚餐（{len(no_list)}人）:\n"
