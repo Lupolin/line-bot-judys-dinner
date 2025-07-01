@@ -18,7 +18,6 @@ poetry.lock
 
 # Python環境相關
 .env
-.env.*
 
 # === VSCode 設定（可選）===
 .vscode/
@@ -35,6 +34,7 @@ config.json
 # === 系統相關 ===
 .DS_Store         # macOS
 Thumbs.db         # Windows
+reply.db
 
 # === 單元測試 / coverage ===
 coverage/

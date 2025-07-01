@@ -81,9 +81,25 @@ def scheduled_notification():
                 elif notification["type"] == "summary":
                     send_summary_notification(user)
 
+def reset_replies():
+    """刪除 replies 資料表中所有資料"""
+    import sqlite3
+    conn = sqlite3.connect('reply.db')
+    c = conn.cursor()
+    c.execute('DELETE FROM replies')  # 清空整張表
+    conn.commit()
+    conn.close()
+
+
+# 加入每周日21:00自動執行 reset_replies
+def reset_replies_with_log():
+    reset_replies()
+    logger.info("已清空 reply.db 資料表")
+
 # ✅ 建立排程器，但不自動啟動（供 app.py 控制）
 scheduler = BackgroundScheduler(timezone=tz)
 scheduler.add_job(scheduled_notification, 'cron', minute='*')
+scheduler.add_job(reset_replies_with_log, 'cron', day_of_week='tue', hour=15, minute=20)
 
 # ✅ 對外暴露的排程啟動函式
 def start_scheduler():
